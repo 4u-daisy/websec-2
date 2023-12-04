@@ -10,17 +10,14 @@ const devicePixelRatio = window.devicePixelRatio || 1
 canvas.width = 1024 * devicePixelRatio
 canvas.height = 576 * devicePixelRatio
 
-
 c.scale(devicePixelRatio, devicePixelRatio)
-
 
 const x = canvas.width / 2
 const y = canvas.height / 2
 
-const frontendPlayers = {}
+const frontEndPlayers = {}
+const frontEndProjectiles = {}
 const frontendPurposes = {}
-
-
 
 socket.on('updatePurpose', ( backendPurposes ) => {
 
@@ -29,16 +26,15 @@ socket.on('updatePurpose', ( backendPurposes ) => {
 
     if(!frontendPurposes[id]) {
       frontendPurposes[id] = new Purpose({
-        x: backendPurpose.x * devicePixelRatio,        
-        y: backendPurpose.y * devicePixelRatio,
+        x: backendPurpose.x,        
+        y: backendPurpose.y,
         radius: backendPurpose.radius,
         color: backendPurpose.color
       })
     } else {
-      frontendPurposes[id].x = backendPurpose.x * devicePixelRatio
-      frontendPurposes[id].y = backendPurpose.y * devicePixelRatio
+      frontendPurposes[id].x = backendPurpose.x
+      frontendPurposes[id].y = backendPurpose.y
     }
-
   }
 
   for(const id in frontendPurposes){
@@ -46,74 +42,103 @@ socket.on('updatePurpose', ( backendPurposes ) => {
       delete frontendPurposes[id]
     }
   }
-
-  console.log(frontendPurposes)
-
 })
 
+socket.on('updateProjectiles', (backEndProjectiles) => {
+  for (const id in backEndProjectiles) {
+    const backEndProjectile = backEndProjectiles[id]
 
-socket.on('updatePlayers', (backendPlayers) => {
-  for(const id in backendPlayers) {
-    const backendPlayer = backendPlayers[id]
-    
-    if(!frontendPlayers[id]) {
-      frontendPlayers[id] = new Player({
-        x: backendPlayer.x,
-        y: backendPlayer.y,
-        radius: backendPlayer.radius,
-        color: backendPlayer.color
+    if (!frontEndProjectiles[id]) {
+      frontEndProjectiles[id] = new Projectile({
+        x: backEndProjectile.x,
+        y: backEndProjectile.y,
+        radius: 5,
+        color: frontEndPlayers[backEndProjectile.playerId]?.color,
+        velocity: backEndProjectile.velocity
+      })
+    } else {
+      frontEndProjectiles[id].x += backEndProjectiles[id].velocity.x
+      frontEndProjectiles[id].y += backEndProjectiles[id].velocity.y
+    }
+  }
+
+  for (const frontEndProjectileId in frontEndProjectiles) {
+    if (!backEndProjectiles[frontEndProjectileId]) {
+      delete frontEndProjectiles[frontEndProjectileId]
+    }
+  }
+})
+
+socket.on('updatePlayers', (backEndPlayers) => {
+  for (const id in backEndPlayers) {
+    const backEndPlayer = backEndPlayers[id]
+
+    if (!frontEndPlayers[id]) {
+      frontEndPlayers[id] = new Player({
+        x: backEndPlayer.x,
+        y: backEndPlayer.y,
+        radius: 10,
+        color: backEndPlayer.color,
+        username: backEndPlayer.username
       })
 
-      document
-      .querySelector('#playerLabels')
-      .innerHTML += `<div data-id="${id}" data-score="${backendPlayer.score}">${backendPlayer.username}: ${backendPlayer.score}</div>`
+      document.querySelector(
+        '#playerLabels'
+      ).innerHTML += `<div data-id="${id}" data-score="${backEndPlayer.score}">${backEndPlayer.username}: ${backEndPlayer.score}</div>`
     } else {
-      document
-      .querySelector(`div[data-id="${id}"]`)
-      .innerHTML = `${backendPlayer.username}: ${backendPlayer.score}`
+      document.querySelector(
+        `div[data-id="${id}"]`
+      ).innerHTML = `${backEndPlayer.username}: ${backEndPlayer.score}`
 
       document
-      .querySelector(`div[data-id="${id}"]`)
-      .setAttribute('data-score', backendPlayer.score)
+        .querySelector(`div[data-id="${id}"]`)
+        .setAttribute('data-score', backEndPlayer.score)
 
+      // sorts the players divs
       const parentDiv = document.querySelector('#playerLabels')
-      const childDiv = Array.from(parentDiv.querySelector('div'))
-      childDiv.sort((a, b) => {
+      const childDivs = Array.from(parentDiv.querySelectorAll('div'))
+
+      childDivs.sort((a, b) => {
         const scoreA = Number(a.getAttribute('data-score'))
         const scoreB = Number(b.getAttribute('data-score'))
 
-        return scoreB - scoreA 
+        return scoreB - scoreA
       })
 
-      childDiv.forEach(div => {
+      // removes old elements
+      childDivs.forEach((div) => {
         parentDiv.removeChild(div)
       })
-      childDiv.forEach(div => {
+
+      // adds sorted elements
+      childDivs.forEach((div) => {
         parentDiv.appendChild(div)
       })
 
+      frontEndPlayers[id].target = {
+        x: backEndPlayer.x,
+        y: backEndPlayer.y
+      }
 
-      if(id === socket.id) {
-        const lastBackendInputIndex = playerInputs.findIndex(input => {
-          return backendPlayer.sequenceNumber === input.sequenceNumber
+      if (id === socket.id) {
+        const lastBackendInputIndex = playerInputs.findIndex((input) => {
+          return backEndPlayer.sequenceNumber === input.sequenceNumber
         })
-        
+
         if (lastBackendInputIndex > -1)
           playerInputs.splice(0, lastBackendInputIndex + 1)
-  
-        playerInputs.forEach(input => {
-          frontendPlayers[id].x += input.dx
-          frontendPlayers[id].y += input.dy
+
+        playerInputs.forEach((input) => {
+          frontEndPlayers[id].target.x += input.dx
+          frontEndPlayers[id].target.y += input.dy
         })
-      } else {
-        frontendPlayers[id].x = backendPlayer.x
-        frontendPlayers[id].y = backendPlayer.y
       }
     }
   }
 
-  for(const id in frontendPlayers) {
-    if (!backendPlayers[id]) {
+  // this is where we delete frontend players
+  for (const id in frontEndPlayers) {
+    if (!backEndPlayers[id]) {
       const divToDelete = document.querySelector(`div[data-id="${id}"]`)
       divToDelete.parentNode.removeChild(divToDelete)
 
@@ -121,7 +146,7 @@ socket.on('updatePlayers', (backendPlayers) => {
         document.querySelector('#usernameForm').style.display = 'block'
       }
 
-      delete frontendPlayers[id]
+      delete frontEndPlayers[id]
     }
   }
 })
@@ -129,21 +154,32 @@ socket.on('updatePlayers', (backendPlayers) => {
 let animationId
 function animate() {
   animationId = requestAnimationFrame(animate)
-  c.fillStyle = 'rgba(0, 0, 0, 0.1)'
-  c.fillRect(0, 0, canvas.width, canvas.height)
-
-  for(const id in frontendPlayers) {
-    const player = frontendPlayers[id]
-    player.draw()
-  }
+  c.clearRect(0, 0, canvas.width, canvas.height)
 
   for (const id in frontendPurposes) {
     const localFrontendPurpose = frontendPurposes[id]
     localFrontendPurpose.draw()
   }
+
+  for (const id in frontEndPlayers) {
+    const frontEndPlayer = frontEndPlayers[id]
+
+    if (frontEndPlayer.target) {
+      frontEndPlayers[id].x +=
+        (frontEndPlayers[id].target.x - frontEndPlayers[id].x) * 0.5
+      frontEndPlayers[id].y +=
+        (frontEndPlayers[id].target.y - frontEndPlayers[id].y) * 0.5
+    }
+
+    frontEndPlayer.draw()
+  }
+
+  for (const id in frontEndProjectiles) {
+    const frontEndProjectile = frontEndProjectiles[id]
+    frontEndProjectile.draw()
+  }
+
 }
-
-
 
 animate()
 
@@ -159,59 +195,54 @@ const keys = {
   },
   d: {
     pressed: false
-  },
-
+  }
 }
 
 const SPEED = 5
 const playerInputs = []
 let sequenceNumber = 0
 setInterval(() => {
-  if(keys.w.pressed) {
+  if (keys.w.pressed) {
     sequenceNumber++
     playerInputs.push({ sequenceNumber, dx: 0, dy: -SPEED })
-    frontendPlayers[socket.id].y -= SPEED
-    socket.emit('keydown', { keycode: 'keyW', sequenceNumber })
+    socket.emit('keydown', { keycode: 'KeyW', sequenceNumber })
   }
-  if(keys.a.pressed) {
+
+  if (keys.a.pressed) {
     sequenceNumber++
     playerInputs.push({ sequenceNumber, dx: -SPEED, dy: 0 })
-    
-    frontendPlayers[socket.id].x -= SPEED
-    socket.emit('keydown', { keycode: 'keyA', sequenceNumber })
-  } 
-  if(keys.s.pressed) {
+    socket.emit('keydown', { keycode: 'KeyA', sequenceNumber })
+  }
+
+  if (keys.s.pressed) {
     sequenceNumber++
     playerInputs.push({ sequenceNumber, dx: 0, dy: SPEED })
-    
-    frontendPlayers[socket.id].y += SPEED
-    socket.emit('keydown', { keycode: 'keyS', sequenceNumber })
+    socket.emit('keydown', { keycode: 'KeyS', sequenceNumber })
   }
-  if(keys.d.pressed) {
+
+  if (keys.d.pressed) {
     sequenceNumber++
     playerInputs.push({ sequenceNumber, dx: SPEED, dy: 0 })
-    
-    frontendPlayers[socket.id].x += SPEED
-    socket.emit('keydown', { keycode: 'keyD', sequenceNumber })
+    socket.emit('keydown', { keycode: 'KeyD', sequenceNumber })
   }
 }, 15)
 
 window.addEventListener('keydown', (event) => {
-  if(!frontendPlayers[socket.id]) return
+  if (!frontEndPlayers[socket.id]) return
 
-  switch(event.code) {
+  switch (event.code) {
     case 'KeyW':
       keys.w.pressed = true
       break
-  
+
     case 'KeyA':
       keys.a.pressed = true
       break
-  
+
     case 'KeyS':
       keys.s.pressed = true
       break
-  
+
     case 'KeyD':
       keys.d.pressed = true
       break
@@ -219,27 +250,25 @@ window.addEventListener('keydown', (event) => {
 })
 
 window.addEventListener('keyup', (event) => {
-  if(!frontendPlayers[socket.id]) return
-  console.log(event.code)
-  
-  switch(event.code) {
+  if (!frontEndPlayers[socket.id]) return
+
+  switch (event.code) {
     case 'KeyW':
       keys.w.pressed = false
       break
-  
+
     case 'KeyA':
       keys.a.pressed = false
       break
-  
+
     case 'KeyS':
       keys.s.pressed = false
       break
-  
+
     case 'KeyD':
       keys.d.pressed = false
-      break  
+      break
   }
-
 })
 
 document.querySelector('#usernameForm').addEventListener('submit', (event) => {
@@ -252,4 +281,3 @@ document.querySelector('#usernameForm').addEventListener('submit', (event) => {
     username: document.querySelector('#usernameInput').value
   })
 })
-

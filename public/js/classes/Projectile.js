@@ -1,16 +1,13 @@
-class Player {
-  constructor({ x, y, radius, color, username }) {
+class Projectile {
+  constructor({ x, y, radius, color = 'white', velocity }) {
     this.x = x
     this.y = y
     this.radius = radius
     this.color = color
-    this.username = username
+    this.velocity = velocity
   }
 
   draw() {
-    c.font = '12px sans-serif'
-    c.fillStyle = 'white'
-    c.fillText(this.username, this.x - 10, this.y + 20)
     c.save()
     c.shadowColor = this.color
     c.shadowBlur = 20
@@ -19,5 +16,11 @@ class Player {
     c.fillStyle = this.color
     c.fill()
     c.restore()
+  }
+
+  update() {
+    this.draw()
+    this.x = this.x + this.velocity.x
+    this.y = this.y + this.velocity.y
   }
 }
