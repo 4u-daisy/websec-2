@@ -1,17 +1,21 @@
 # Lab 2
 
-## Online Multiplayer Game 
+## Online Multiplayer Race 
 
+The goal of the game is to collect the maximum number of points and not to die :)
+### install
+```
+git clone *repo* 
+for win: cd/d folder 
+npm install express --save-exact 
+npm instal nodemon 
+npm install socket.io --save-exact 
+```
 
-install
-git clone *repo* <br>
-for win: cd/d folder <br>
-npm install express --save-exact <br>
-npm instal nodemon <br>
-npm install socket.io --save-exact <br>
+### using
+```
+nodemon backend.js 
+*or* 
+node backend.js 
+```
 
-<br>
-run <br>
-nodemon backend.js <br> 
-*or* <br>
-node backend.js <br>
