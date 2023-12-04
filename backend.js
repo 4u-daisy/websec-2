@@ -7,7 +7,7 @@ const server = http.createServer(app)
 const { Server } = require('socket.io')
 const io = new Server(server, { pingInterval: 2000, pingTimeout: 5000 })
 
-const port = 3001
+const port = 3000
 
 app.use(express.static('public'))
 
@@ -35,8 +35,6 @@ purposes[purposeId] = {
 
 
 io.on('connection', (socket) => {
-  console.log('a user connected')
-
   io.emit('updatePlayers', backEndPlayers)
 
   socket.on('shoot', ({ x, y, angle }) => {
@@ -53,8 +51,6 @@ io.on('connection', (socket) => {
       velocity,
       playerId: socket.id
     }
-
-    console.log(backEndProjectiles)
   })
 
   socket.on('initGame', ({ username, width, height }) => {
@@ -67,8 +63,6 @@ io.on('connection', (socket) => {
       username: username,
       id: socket.id
     }
-
-    // where we init our canvas
     backEndPlayers[socket.id].canvas = {
       width,
       height
@@ -197,5 +191,3 @@ setInterval(() => {
 server.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
-
-console.log('server did load')
