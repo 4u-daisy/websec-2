@@ -94,7 +94,6 @@ socket.on('updatePlayers', (backEndPlayers) => {
         .querySelector(`div[data-id="${id}"]`)
         .setAttribute('data-score', backEndPlayer.score)
 
-      // sorts the players divs
       const parentDiv = document.querySelector('#playerLabels')
       const childDivs = Array.from(parentDiv.querySelectorAll('div'))
 
@@ -105,12 +104,10 @@ socket.on('updatePlayers', (backEndPlayers) => {
         return scoreB - scoreA
       })
 
-      // removes old elements
       childDivs.forEach((div) => {
         parentDiv.removeChild(div)
       })
 
-      // adds sorted elements
       childDivs.forEach((div) => {
         parentDiv.appendChild(div)
       })
@@ -136,7 +133,6 @@ socket.on('updatePlayers', (backEndPlayers) => {
     }
   }
 
-  // this is where we delete frontend players
   for (const id in frontEndPlayers) {
     if (!backEndPlayers[id]) {
       const divToDelete = document.querySelector(`div[data-id="${id}"]`)
